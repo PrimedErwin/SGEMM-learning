@@ -34,8 +34,11 @@
 
   Smem is fast enough. Why still register is needed? Due to [CUDA C Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#shared-memory)\(CUDA 12.4, Chapter3.2.4\), The matrix multiplication is performed by smem directly. In smem, matrix A is read by row, but matrix B is read by col. Though here are no bank conflicts, each time only one element needed in matrix B, which results waste of other 31 bytes. So even smem is running with full bandwidth, matrix B still wastes a lot of bandwidth.
 
-  So based on the reference\(end of the current doc\), we need to consider latency here. Assuming that it's fully running with pipeline due to the latency of smem. Each cycle the smem pops data out\(might be 128 bytes, depends on your gpu\), the CUDA core computes. But a lot of data is wasted, the CUDA core could perform 128\(still depends on your gpu\) FFMA ops, now it can only perform several. So read by row in smem is bad, we need registers.
+  So based on the reference\(end of the current doc\), we need to consider latency here. Assuming that it's fully running with pipeline\(hide the latency of smem\). Each cycle the smem pops data out\(might be 128 bytes, depends on your gpu\), the CUDA core computes. But a lot of data is wasted, the CUDA core could perform 128\(still depends on your gpu\) FFMA ops, now it can only perform several. So read by row in smem is bad, we need registers.
+### How we consider optimizing
+  Use faster memory. Hide latency. Keep computing.
 
+  Gmem -> smem, we consider bandwidth.Smem->register, we consider ratio of computing/dataloading.
   
 ## Reference
   [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample/tree/master)
