@@ -7,6 +7,12 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+//basic param
+#define matM 1024
+#define matN 2048
+#define matK 512
+#define DIFF 1e-3
+
 void checkerror(const char* msg)
 {
 	cudaError_t err = cudaGetLastError();
