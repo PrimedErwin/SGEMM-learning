@@ -56,7 +56,7 @@ void matrixMul(const float* A, const float* B, float* C,
 	//float4 usage is vector request based on reference in Readme.md
 	float4 regA[M_num / 4];//128 bit vector request
 	float4 regB[N_num / 4];
-	float regC[M_num * N_num];
+	float regC[M_num * N_num] = { 0 };
 
 	for (int i = 0; i < K / K_tile; i++)
 	{
@@ -71,8 +71,37 @@ void matrixMul(const float* A, const float* B, float* C,
 		//in KMN loop A is read by column, bad
 		//here we transpose it(and avoid bank conflict)
 		regA[0] = *reinterpret_cast<const float4*>(baseA + rowA * K + colA + i * K_tile);
-		
+		//after transpose, the float4 become vertical, so add M_tile each element
+		matA[rowA + (colA + 0) * M_tile] = regA[0].x;
+		matA[rowA + (colA + 1) * M_tile] = regA[0].y;
+		matA[rowA + (colA + 2) * M_tile] = regA[0].z;
+		matA[rowA + (colA + 3) * M_tile] = regA[0].w;
+		__syncthreads();
+
+		//we have transposed matA, matB in smem
+		for (int k = 0; k < K_tile; k++)
+		{
+			//e.g. tid.x=1,tid.y=0, this thread reads matA[0], matB[1](of float4)
+			regA[0] = *reinterpret_cast<float4*>(&matA[1]);
+			regA[1] = *reinterpret_cast<float4*>(&matA[1]);
+			regB[0] = *reinterpret_cast<float4*>(&matB[1]);
+			regB[1] = *reinterpret_cast<float4*>(&matB[1]);
+			for (int m = 0; m < M_num; m++)
+			{
+				for (int n = 0; n < N_num; n++)
+				{
+					//here inside we perform 8x8 multiplication for each thread
+					//and add it back in row-major in regC
+
+				}
+			}
+		}
+		//sync block after each tiled block was calculated
+
 	}
+	//all the results are now in regC of each block
+	//store them back into C in gmem
+
 }
 
 
