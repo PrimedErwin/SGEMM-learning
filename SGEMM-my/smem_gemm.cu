@@ -82,10 +82,10 @@ void matrixMul(const float* A, const float* B, float* C,
 		for (int k = 0; k < K_tile; k++)
 		{
 			//e.g. tid.x=1,tid.y=0, this thread reads matA[0], matB[1](of float4)
-			regA[0] = *reinterpret_cast<float4*>(&matA[1]);
-			regA[1] = *reinterpret_cast<float4*>(&matA[1]);
-			regB[0] = *reinterpret_cast<float4*>(&matB[1]);
-			regB[1] = *reinterpret_cast<float4*>(&matB[1]);
+			regA[0] = *reinterpret_cast<float4*>(&matA[threadIdx.y * M_num + k * M_tile]);
+			regA[1] = *reinterpret_cast<float4*>(&matA[threadIdx.y * M_num + k * M_tile + 4]);
+			regB[0] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile]);
+			regB[1] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile + 4]);
 			for (int m = 0; m < M_num; m++)
 			{
 				for (int n = 0; n < N_num; n++)
