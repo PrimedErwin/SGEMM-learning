@@ -10,7 +10,7 @@
 #include "smem_gemm.cuh"
 
 //basic param
-#define matM 512
+#define matM 768
 #define matN 1024
 #define matK 512
 #define DIFF 1e-3
@@ -77,8 +77,6 @@ void checkMulResult(float* hC, float* dC, int width, int height)
 //extern void naiveSmemGemm(const float* A, const float* B, float* C,
 //	const int M, const int N, const int K);
 
-extern void sgemm(int M, int N, int K, float* a, float* b, float* c, float alpha = 1, float beta = 0);
-
 int main(int argc, char** argv)
 {
 	printf("Starting mySGEMM on device 0: ");
@@ -140,14 +138,12 @@ int main(int argc, char** argv)
 
 	//calculate by GPU, warmup first
 	Smem_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
-	//sgemm(matsize.hA, matsize.wB, matsize.wA, dA, dB, dC);
 	checkerror("mycublas error");
 	//calculate by GPU
 	cudaEventRecord(cuStart);
 	for (int i = 0; i < 50; i++)
 	{
 		Smem_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
-		//sgemm(matsize.hA, matsize.wB, matsize.wA, dA, dB, dC);
 	}
 	cudaEventRecord(cuEnd);
 	cudaEventSynchronize(cuEnd);
