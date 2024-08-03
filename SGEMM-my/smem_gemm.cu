@@ -48,7 +48,7 @@ void matrixMul(const float* A, const float* B, float* C,
 		//current block tile's base address
 	const float* baseA = A + baseY * K;
 	const float* baseB = B + baseX;//A and B need additional offset
-	float* baseC = C + N * (baseY + threadIdx.x * N_num) + threadIdx.y * M_num + baseX;
+	float* baseC = C + N * (baseY + threadIdx.y * N_num) + threadIdx.x * M_num + baseX;
 	//smem define, no double buffer, 4KB each
 	__shared__ float matA[M_tile * K_tile];
 	__shared__ float matB[K_tile * N_tile];
@@ -83,10 +83,10 @@ void matrixMul(const float* A, const float* B, float* C,
 		for (int k = 0; k < K_tile; k++)
 		{
 			//e.g. tid.x=1,tid.y=0, this thread reads matA[0], matB[1](of float4)
-			regA[0] = *reinterpret_cast<float4*>(&matA[threadIdx.x * M_num + k * M_tile]);
-			regA[1] = *reinterpret_cast<float4*>(&matA[threadIdx.x * M_num + k * M_tile + 4]);
-			regB[0] = *reinterpret_cast<float4*>(&matB[threadIdx.y * N_num + k * N_tile]);
-			regB[1] = *reinterpret_cast<float4*>(&matB[threadIdx.y * N_num + k * N_tile + 4]);
+			regA[0] = *reinterpret_cast<float4*>(&matA[threadIdx.y * M_num + k * M_tile]);
+			regA[1] = *reinterpret_cast<float4*>(&matA[threadIdx.y * M_num + k * M_tile + 4]);
+			regB[0] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile]);
+			regB[1] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile + 4]);
 			//for each thread 8x8
 			for (int m = 0; m < 2; m++)
 			{
