@@ -86,22 +86,53 @@ void matrixMul(const float* A, const float* B, float* C,
 			regA[1] = *reinterpret_cast<float4*>(&matA[threadIdx.y * M_num + k * M_tile + 4]);
 			regB[0] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile]);
 			regB[1] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile + 4]);
-			for (int m = 0; m < M_num; m++)
+			//for each thread 8x8
+			for (int m = 0; m < 2; m++)
 			{
-				for (int n = 0; n < N_num; n++)
+				for (int n = 0; n < 2; n++)
 				{
 					//here inside we perform 8x8 multiplication for each thread
+					//8x8=four 4x4(float4)
+					//each float4 needs 4 FFMA, total 16 FFMA
 					//and add it back in row-major in regC
+
+					//row0
+					regC[m * 4 * N_num + n * 4] += regA[m].x * regB[n].x;
+					regC[m * 4 * N_num + n * 4 + 1] += regA[m].x * regB[n].y;
+					regC[m * 4 * N_num + n * 4 + 2] += regA[m].x * regB[n].z;
+					regC[m * 4 * N_num + n * 4 + 3] += regA[m].x * regB[n].w;
+					//row1, +8
+					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].x;
+					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].y;
+					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].z;
+					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].w;
+					//row2, +16
+					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].x;
+					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].y;
+					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].z;
+					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].w;
+					//row3, +24
+					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w	 * regB[n].x;
+					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w * regB[n].y;
+					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w * regB[n].z;
+					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w * regB[n].w;
 
 				}
 			}
 		}
 		//sync block after each tiled block was calculated
-
+		__syncthreads();
 	}
 	//all the results are now in regC of each block
 	//store them back into C in gmem
-
+	//store regC with float4 needs 8x2 times
+	for (int m = 0; m < M_num; m++)
+	{
+		for (int n = 0; n < N_num / 4; n++)
+		{
+			*reinterpret_cast<float4*>(&C[m * N + n * 4]) = *reinterpret_cast<float4*>(&regC[m * M_num + n * 4]);
+		}
+	}
 }
 
 
