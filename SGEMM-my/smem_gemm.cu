@@ -8,6 +8,7 @@
 #include <cstdio>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "smem_gemm.cuh"
 
 //*********************
 //Hereby set the params
@@ -26,8 +27,8 @@ constexpr int smem_size_A = M_tile * K_tile;
 constexpr int smem_size_B = K_tile * N_tile;
 constexpr int smem_nByte = (smem_size_A + smem_size_B) * sizeof(float);
 //naive smem gemm func for startup.cpp
-void naiveSmemGemm(const float* A, const float* B, float* C,
-	const int M, const int N, const int K);
+//void naiveSmemGemm(const float* A, const float* B, float* C,
+//	const int M, const int N, const int K);
 
 //gemm func
 __global__
@@ -47,7 +48,7 @@ void matrixMul(const float* A, const float* B, float* C,
 		//current block tile's base address
 	const float* baseA = A + baseY * K;
 	const float* baseB = B + baseX;//A and B need additional offset
-	float* baseC = C + N * (baseY + threadIdx.y * N_num) + threadIdx.x * M_num + baseX;
+	float* baseC = C + N * (baseY + threadIdx.y * M_num) + threadIdx.x * N_num + baseX;
 	//smem define, no double buffer, 4KB each
 	__shared__ float matA[M_tile * K_tile];
 	__shared__ float matB[K_tile * N_tile];
@@ -103,19 +104,19 @@ void matrixMul(const float* A, const float* B, float* C,
 					regC[m * 4 * N_num + n * 4 + 3] += regA[m].x * regB[n].w;
 					//row1, +8
 					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].x;
-					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].y;
-					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].z;
-					regC[(m * 4 + 1) * N_num + n * 4] += regA[m].y * regB[n].w;
+					regC[(m * 4 + 1) * N_num + n * 4 + 1] += regA[m].y * regB[n].y;
+					regC[(m * 4 + 1) * N_num + n * 4 + 2] += regA[m].y * regB[n].z;
+					regC[(m * 4 + 1) * N_num + n * 4 + 3] += regA[m].y * regB[n].w;
 					//row2, +16
 					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].x;
-					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].y;
-					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].z;
-					regC[(m * 4 + 2) * N_num + n * 4] += regA[m].z * regB[n].w;
+					regC[(m * 4 + 2) * N_num + n * 4 + 1] += regA[m].z * regB[n].y;
+					regC[(m * 4 + 2) * N_num + n * 4 + 2] += regA[m].z * regB[n].z;
+					regC[(m * 4 + 2) * N_num + n * 4 + 3] += regA[m].z * regB[n].w;
 					//row3, +24
-					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w	 * regB[n].x;
-					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w * regB[n].y;
-					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w * regB[n].z;
-					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w * regB[n].w;
+					regC[(m * 4 + 3) * N_num + n * 4] += regA[m].w * regB[n].x;
+					regC[(m * 4 + 3) * N_num + n * 4 + 1] += regA[m].w * regB[n].y;
+					regC[(m * 4 + 3) * N_num + n * 4 + 2] += regA[m].w * regB[n].z;
+					regC[(m * 4 + 3) * N_num + n * 4 + 3] += regA[m].w * regB[n].w;
 
 				}
 			}
@@ -130,7 +131,7 @@ void matrixMul(const float* A, const float* B, float* C,
 	{
 		for (int n = 0; n < N_num / 4; n++)
 		{
-			*reinterpret_cast<float4*>(&C[m * N + n * 4]) = *reinterpret_cast<float4*>(&regC[m * M_num + n * 4]);
+			*reinterpret_cast<float4*>(&baseC[m * N + n * 4]) = *reinterpret_cast<float4*>(&regC[m * M_num + n * 4]);
 		}
 	}
 }
@@ -138,7 +139,7 @@ void matrixMul(const float* A, const float* B, float* C,
 
 
 
-void naiveSmemGemm(const float* A, const float* B, float* C,
+void Smem_GEMM::naiveSmemGemm(const float* A, const float* B, float* C,
 	const int M, const int N, const int K)
 {
 	//define block and grid, 16x16 thread block processes 128x128 val in matrix C
