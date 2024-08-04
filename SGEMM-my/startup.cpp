@@ -10,9 +10,9 @@
 #include "smem_gemm.cuh"
 
 //basic param
-#define matM 768
+#define matM 1536
 #define matN 1024
-#define matK 512
+#define matK 1024
 #define DIFF 1e-3
 
 void checkerror(const char* msg)
