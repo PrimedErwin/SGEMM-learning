@@ -32,7 +32,7 @@ constexpr int smem_nByte = (smem_size_A + smem_size_B) * sizeof(float);
 
 //gemm func
 __global__
-void matrixMul(const float* A, const float* B, float* C,
+void Smem_GEMM::matrixMul(const float* A, const float* B, float* C,
 	const int M, const int N, const int K)
 {
 	//basic params
@@ -145,5 +145,5 @@ void Smem_GEMM::naiveSmemGemm(const float* A, const float* B, float* C,
 	//define block and grid, 16x16 thread block processes 128x128 val in matrix C
 	dim3 blocksize(blockSize, blockSize);
 	dim3 gridSize((N - 1) / N_tile + 1, (M - 1) / M_tile + 1);
-	matrixMul << <gridSize, blocksize >> > (A, B, C, M, N, K);
+	Smem_GEMM::matrixMul << <gridSize, blocksize >> > (A, B, C, M, N, K);
 }
