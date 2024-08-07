@@ -52,7 +52,7 @@ void WarpOp_GEMM::matrixMul(const float* A, const float* B, float* C,
 		//might not, this just use 2x16 warp process 4x8 data
 		//so it looks like compute/ld ratio same to 4x8 warp tile?
 		//Later nsight compute will give the answer -TODO
-	const unsigned int rowC = warpId / 2 + (warpbId % 4) * 8;
+	const unsigned int rowC = ((warpId / 2) * 4 + (warpbId % 4)) * 8;
 	const unsigned int colC = ((warpId & 1) * 8 + warpbId / 4) * 8;
 	//current block tile's base address
 	const float* baseA = A + baseY * K;
@@ -100,6 +100,7 @@ void WarpOp_GEMM::matrixMul(const float* A, const float* B, float* C,
 			//regA[1] = *reinterpret_cast<float4*>(&matA[threadIdx.y * M_num + k * M_tile + 4]);
 			//regB[0] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile]);
 			//regB[1] = *reinterpret_cast<float4*>(&matB[threadIdx.x * N_num + k * N_tile + 4]);
+
 			regA[0] = *reinterpret_cast<float4*>(&matA[rowC + k * M_tile]);
 			regA[1] = *reinterpret_cast<float4*>(&matA[rowC + k * M_tile + 4]);
 			regB[0] = *reinterpret_cast<float4*>(&matB[colC + k * N_tile]);

@@ -16,12 +16,14 @@
 #define matK 1024
 #define DIFF 1e-3
 
-void checkerror(const char* msg)
+#define checkerror(msg) checkerrors(msg, __FILE__, __LINE__)
+
+void checkerrors(const char* msg, const char* file = NULL, const int line = -1)
 {
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess)
 	{
-		fprintf(stderr, "CUDA error at %d: ", __LINE__);
+		fprintf(stderr, "CUDA error at %s(%d): ", file, line);
 		fprintf(stderr, "%s, %s\n", msg, cudaGetErrorString(err));
 		exit(EXIT_FAILURE);
 	}
