@@ -54,7 +54,14 @@ They read by order, store by order. Every time matA is read, they broadcast, bec
 &ensp;&ensp;So every warp size 2x16, reads `(2*K + 16*K)*4`, computes `2*16*K*2`, ratio of compute/ld = 16/18. What if we tile the warp by size 4x8? It reads `(4*K + 8*K)*4`, computes `4*8*K*2`, ratio of compute/ld = 16/12. Higher ratio than before! warp_tile_gemm will do this.
 #### warp_tile_gemm
 &ensp;&ensp;Bank conflict is not processed here. We just tile warps here. But we cannot really make 4x8 warps, since our blockSize is 16x16, the warp is set by 2x16. So we change indices to achieve warp tiling. First we have to know what indices should be changed. It's the indices that have something to do with the warps. So reading matA and matB into regA and regB, storing regC into gmem need to be changed. In total: address of reading matA, matB, and baseC. 
-&ensp;&ensp;How to change indices? We use rowC, colC to replace threadIdx.y\*M_num, threadIdx.x\*N_num. So simply replace the code. The point is how to write rowC and colC. The first thing I thought is each threads needs 2 float4 for every matrix, so here must be 8\*something. 
+&ensp;&ensp;How to change indices? We use rowC, colC to replace threadIdx.y\*M_num, threadIdx.x\*N_num. So simply replace the code. The point is how to write rowC and colC. The first thing I thought is each threads needs 2 float4 for every matrix, so here must be 8\*something. Let's see how the original one works: 
 
+![](img/tile1.png)
+
+The image shows what data should every thread read from smem, the number means the offset address of current K_tile loop. As we can see, row by row, col by col, every multiplication is unique. 
+
+![](img/tile2.png)
+
+ee
 ## Reference
   [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample/tree/master)
