@@ -58,10 +58,10 @@ They read by order, store by order. Every time matA is read, they broadcast, bec
 
 ![](img/tile1.png)
 
-The image shows what data should every thread read from smem, the number means the offset address of current K_tile loop. As we can see, row by row, col by col, every multiplication is unique. 
+The image shows what data should every thread read from smem, the number means the offset address of current K_tile loop. As we can see, row by row, col by col, every multiplication is unique. So all we need to do is tile the data by 4x8, and make sure that every multiplication is unique. Design rowC and colC symmetrically, 4 rows contains 2 warps, so warpId should be divided by 2\(for 4 rows\), each warp contains 32 threads, so warpbId should be divided by 4\(for 8 columns\). Put them together, we get rowC and colC in the code. The tiled one works like this:
 
 ![](img/tile2.png)
 
-ee
+ColC is divided into 4x8 perfectly, but rowC is 4x4 for unique mulitiplications.
 ## Reference
   [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample/tree/master)
