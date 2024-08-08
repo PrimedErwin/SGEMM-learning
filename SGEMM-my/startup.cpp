@@ -8,19 +8,22 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "smem_gemm.cuh"
+#include "warp_op_gemm.cuh"
 
 //basic param
-#define matM 768
+#define matM 1536
 #define matN 1024
-#define matK 512
+#define matK 1024
 #define DIFF 1e-3
 
-void checkerror(const char* msg)
+#define checkerror(msg) checkerrors(msg, __FILE__, __LINE__)
+
+void checkerrors(const char* msg, const char* file = NULL, const int line = -1)
 {
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess)
 	{
-		fprintf(stderr, "CUDA error at %d: ", __LINE__);
+		fprintf(stderr, "CUDA error at %s(%d): ", file, line);
 		fprintf(stderr, "%s, %s\n", msg, cudaGetErrorString(err));
 		exit(EXIT_FAILURE);
 	}
@@ -137,13 +140,13 @@ int main(int argc, char** argv)
 	checkerror("Sync error");
 
 	//calculate by GPU, warmup first
-	Smem_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+	WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	checkerror("mycublas error");
 	//calculate by GPU
 	cudaEventRecord(cuStart);
 	for (int i = 0; i < 50; i++)
 	{
-		Smem_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+		WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	}
 	cudaEventRecord(cuEnd);
 	cudaEventSynchronize(cuEnd);

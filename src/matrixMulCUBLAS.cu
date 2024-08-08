@@ -17,9 +17,9 @@
 #include <Windows.h>
 
 //basic param
-#define M 1024
-#define N 2048
-#define K 512
+#define M 1536
+#define N 1024
+#define K 1024
 #define DIFF 1e-3
 
 //CUDA error check
