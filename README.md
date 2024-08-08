@@ -17,7 +17,7 @@
     ### Hardware limitations of RTX3500Ada(no boost)
       RTX3500Ada: 5120 CUDA cores + 1545 MHz clock
     
-      Single precision floating-point performance = 5120*2*1545*1e6/1e9 = 15.82 TFLOPS
+      Single precision floating-point performance = 5120\*2*1545*1e6/1e9 = 15.82 TFLOPS
 ## Implementation
 ### Core: How to reach the hardware limitation
   Hiding the latency is important. Threads can't just wait for data, they should always be computing.
