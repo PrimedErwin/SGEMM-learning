@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <Windows.h>
 
+#include <nvtx3/nvToolsExt.h>
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "smem_gemm.cuh"
@@ -140,18 +142,20 @@ int main(int argc, char** argv)
 	checkerror("Sync error");
 
 	//calculate by GPU, warmup first
-	WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+	NC_WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	checkerror("mycublas error");
 	//calculate by GPU
+	nvtxRangeId_t range = nvtxRangeStart("ProfileA");
 	cudaEventRecord(cuStart);
 	for (int i = 0; i < 50; i++)
 	{
-		WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+		NC_WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	}
 	cudaEventRecord(cuEnd);
 	cudaEventSynchronize(cuEnd);
 	cudaEventElapsedTime(&gpu_time, cuStart, cuEnd);
 	checkerror("Event sync error");
+	nvtxRangeEnd(range);
 	gpu_time /= 50;
 	printf("GPU time cost %.4f ms\n\n", gpu_time);
 
