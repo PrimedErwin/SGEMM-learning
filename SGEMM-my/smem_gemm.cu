@@ -48,7 +48,7 @@ void Smem_GEMM::matrixMul(const float* A, const float* B, float* C,
 		//current block tile's base address
 	const float* baseA = A + baseY * K;
 	const float* baseB = B + baseX;//A and B need additional offset
-	float* baseC = C + N * (baseY + threadIdx.y * M_num) + threadIdx.x * N_num + baseX;
+	float* const baseC = C + N * (baseY + threadIdx.y * M_num) + threadIdx.x * N_num + baseX;
 	//smem define, no double buffer, 4KB each
 	__shared__ float matA[M_tile * K_tile];
 	__shared__ float matB[K_tile * N_tile];
