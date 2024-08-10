@@ -94,5 +94,15 @@ ColC is divided into 4x8 perfectly, but rowC is 4x4 for unique mulitiplications.
 #### warp_op_noconflict
 &ensp;&ensp;Based on warp_tile_gemm, solving matA's bank conflict. Simply pad the memory of matA. No bank conflict checked by Nsight compute. Performance improved a little due to register overflow.
 
+#### db_gemm
+&ensp;&ensp;FFMA can run with ld/st unit at the same time, so when the current K_tile is computing, load the next tile. Double buffer does this. In prefetching, ada can read data directly from gmem to smem without the assistance of register, but turing still needs additional registers. 
+
+### Todo
+Register overflow
+
+Baseclock frequency drop
+
+SplitK
+
 ## Reference
   [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample/tree/master)
