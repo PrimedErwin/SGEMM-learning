@@ -10,6 +10,15 @@
   RTX3500Ada
   
   64GB DDR5
+
+
+  AND
+
+  AMD ThreadRipper 3990X
+
+  RTX2070
+
+  128GB DDR4
 ## Physical limitations
   Chasing the speed of CUBLAS and hardware limitations. 
   - TODO
@@ -17,7 +26,11 @@
     ### Hardware limitations of RTX3500Ada(no boost)
       RTX3500Ada: 5120 CUDA cores + 1545 MHz clock
     
-      Single precision floating-point performance = 5120\*2*1545*1e6/1e9 = 15.82 TFLOPS
+      Single precision floating-point performance = 5120\*2\*1545\*1e6/1e9 = 15.82 TFLOPS
+
+      RTX2070: 2304 CUDA cores + 1620 MHz clock
+
+      Single precision floating-point performance = 2304\*2\*1620\*1e6/1e9 = 7.46 TFLOPS
 ## Implementation
 ### Core: How to reach the hardware limitation
   Hiding the latency is important. Threads can't just wait for data, they should always be computing.
@@ -49,7 +62,7 @@
 
 They read by order, store by order. Every time matA is read, they broadcast, because the same row\(threadIdx.y\) reads the same matA address. Every time matB is read, they seldom broadcast, because the same threadIdx.x reads the same matB address. It will be explained in the following paragraph.
 
-&ensp;&ensp;Explain here about bank conflict and broadcast. It's advised to read this with the corresponding code. Float4 equals to 128bit, a warp will be seperated into 4 times if it performs 128bit request to smem, 8 threads each time\(If 32bit, int or float, 32 threads read smem at once\). So gmem->smem, transposing matA, thread0 and thread1\(odd and even\) has the same rowA, and M_tile=128 can be divided by 32, bank conflict happens here between thread0 and thread1 4 times. Same in smem->reg, matA is read by threadIdx.y, broadcast, no conflict, matB is read by threadIdx.x\(exactly threadIdx.x*8\), 32/8=4, so every 4 thread conflicts, for example thread0 and thread4 read float4 from the same 4 smem bank, they conflict. Bank conflict influense performance here. 
+&ensp;&ensp;Explaining here about bank conflict and broadcast. It's advised to read this with the corresponding code. Float4 equals to 128bit, a warp will be seperated into 4 times if it performs 128bit request to smem, 8 threads each time\(If 32bit, int or float, 32 threads read smem at once\). So gmem->smem, transposing matA, thread0 and thread1\(odd and even\) has the same rowA, and M_tile=128 can be divided by 32, bank conflict happens here between thread0 and thread1 4 times. Same in smem->reg, matA is read by threadIdx.y, broadcast, no conflict, matB is read by threadIdx.x\(exactly threadIdx.x*8\), 32/8=4, so every 4 thread conflicts, for example thread0 and thread4 read float4 from the same 4 smem bank, they conflict. Bank conflict influense performance here. 
 
 &ensp;&ensp;So every warp size 2x16, reads `(2*K + 16*K)*4`, computes `2*16*K*2`, ratio of compute/ld = 16/18. What if we tile the warp by size 4x8? It reads `(4*K + 8*K)*4`, computes `4*8*K*2`, ratio of compute/ld = 16/12. Higher ratio than before! warp_tile_gemm will do this.
 #### warp_tile_gemm
@@ -63,5 +76,23 @@ The image shows what data should every thread read from smem, the number means t
 ![](img/tile2.png)
 
 ColC is divided into 4x8 perfectly, but rowC is 4x4 for unique mulitiplications.
+#### fixed_smem_gemm
+&ensp;&ensp;warp_tile_gemm.cu does run a little bit faster than smem_gemm.cu, and due to the tiling, reading matB now has no bank conflict, though transposing matA still has bank conflict. But it should not be just a little bit faster\(+6~7%\). I checked Nsight compute to find that the code has a register overflow problem.
+
+&ensp;&ensp;Reg of smem_gemm:
+
+&ensp;&ensp;RTX2070 = 113, RTX3500Ada = 127
+
+&ensp;&ensp;Reg of warp_tile_gemm:
+
+&ensp;&ensp;RTX2070 = 90, RTX3500Ada = 90
+
+&ensp;&ensp;warp_tile_gemm has more variables than smem_gemm, so both of Turing and Ada overflows registers.
+
+&ensp;&ensp;This file tends to reduce the use of registers. Here are several methods to reduce registers: use PTX, reduce variables, wait for new cards. Before I search the fourm, I created this file with all variables fixed. But no registers are reduced. Because the counts of registers are optimized by the complier, so simply fix all the variables or delete several variables may not reduce the use of registers. So this file has been deprecated. I will find some way else to solve this.
+
+#### warp_op_noconflict
+&ensp;&ensp;Based on warp_tile_gemm, solving matA's bank conflict. Simply pad the memory of matA. No bank conflict checked by Nsight compute. Performance improved a little due to register overflow.
+
 ## Reference
   [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample/tree/master)

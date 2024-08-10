@@ -11,11 +11,12 @@
 #include "device_launch_parameters.h"
 #include "smem_gemm.cuh"
 #include "warp_op_gemm.cuh"
+#include "db_gemm.cuh"
 
 //basic param
-#define matM 1536
-#define matN 1024
-#define matK 1024
+#define matM 2560
+#define matN 2560
+#define matK 2560
 #define DIFF 1e-3
 
 #define checkerror(msg) checkerrors(msg, __FILE__, __LINE__)
@@ -142,14 +143,15 @@ int main(int argc, char** argv)
 	checkerror("Sync error");
 
 	//calculate by GPU, warmup first
-	NC_WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+	Db_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	checkerror("mycublas error");
 	//calculate by GPU
 	nvtxRangeId_t range = nvtxRangeStart("ProfileA");
 	cudaEventRecord(cuStart);
 	for (int i = 0; i < 50; i++)
 	{
-		NC_WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+		Db_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+		//NC_WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	}
 	cudaEventRecord(cuEnd);
 	cudaEventSynchronize(cuEnd);
