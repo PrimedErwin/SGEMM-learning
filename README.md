@@ -97,8 +97,38 @@ ColC is divided into 4x8 perfectly, but rowC is 4x4 for unique mulitiplications.
 #### db_gemm
 &ensp;&ensp;FFMA can run with ld/st unit at the same time, so when the current K_tile is computing, load the next tile. Double buffer does this. In prefetching, ada can read data directly from gmem to smem without the assistance of register, but turing still needs additional registers. 
 
+### Profiling
+&ensp;&ensp;In this section I profile my kernel and compare with CUBLAS. 
+
+&ensp;&ensp;In [[#Platform]] I have 2 computers, and in this section RTX3500Ada will be chosen. So the platform is shown as the following: 
+
+- i9-13950HX
+ 64GB DDR5
+ RTX3500Ada\(AD104\)
+ Nsight compute 2024.2.0
+ 
+&ensp;&ensp;The program runs following this: warmup->MyGEMM\(10times\)->CUBLAS\(3 times\). The numbers in the brackets represents the times that Nsight records, and does not reflect the actual number of times the kernel was executed. Because it was set to run 50 times per kernel for simple profiling when I was coding, but Nsight will really record 50 times if I really run 50 times, and that takes a lot of time, so I changed the times for Nsight. 
+#### M2560N2560K2560
+![](img/profi1.png)
+![](img/profi2.png)
+
+Kernel2 is CUBLAS, matrixMul is my kernel. One strage thing, SM Frequency is 1.11GHz instead of 1.545GHz, I don't know why, probably solve later. My kernel/CUBLAS = 4.28/4.59 = 93.2%. 
+
+Details of my kernel:
+![](img/profi3.png)
+- Launch Statistics:
+ I planned to use 128 registers, but overflowed in warp_op_gemm\(and also warp_op_noconflict\). In double buffer version I used 137 registers. It will perform better below 128 registers due to higher occupancy. But I think it's hard to optimize it. Because due to compute/ldst ratio at gmem->smem stage, I tiled the matrix into 128x128 for 16x16 thread block, which each threads handle 8x8 matrix. So at least they will use 8x8+8+8 = 80 registers, later with index calculating things the program will touch the bottle neck of 128 registers. PTX may be helpful.
+ - Occupancy:
+ As we can see, 8 active warps per SM because I used too much registers. So only 1 block can be active, on cc8.9 device, which supports 1536 concurrent threads, the occupancy is 256/1536 = 0.1667. A way to optimize is tile the block into 128x256 for 16x32 thread block\(?\)
+ 
+Details of my kernel again:
+![](img/profi4.png)
+![](img/profi5.png)
+
 ### Todo
-Register overflow
+Register overflow\(not very possible\)
+
+Better double buffer and PTX
 
 Baseclock frequency drop
 
