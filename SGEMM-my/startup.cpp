@@ -9,9 +9,12 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "cublas_v2.h"
 #include "smem_gemm.cuh"
 #include "warp_op_gemm.cuh"
 #include "db_gemm.cuh"
+
+#define CUBLAS_COMPARISION
 
 //basic param
 #define matM 2560
@@ -80,6 +83,8 @@ void checkMulResult(float* hC, float* dC, int width, int height)
 	fprintf(stderr, "Error result count = %d\n", cnt);
 }
 
+#pragma comment (lib, "cublas.lib")
+
 //extern void naiveSmemGemm(const float* A, const float* B, float* C,
 //	const int M, const int N, const int K);
 
@@ -109,8 +114,9 @@ int main(int argc, char** argv)
 
 	//basic stopwatch
 	LARGE_INTEGER IpFreq, IpStart, IpEnd;
-	cudaEvent_t cuStart, cuEnd;
+	cudaEvent_t cuStart, cuEnd, cuEnd_CUBLAS;
 	cudaEventCreate(&cuStart);
+	cudaEventCreate(&cuEnd_CUBLAS);
 	cudaEventCreate(&cuEnd);
 	float cpu_time, gpu_time;
 	QueryPerformanceFrequency(&IpFreq);
@@ -133,6 +139,8 @@ int main(int argc, char** argv)
 	cudaMemcpyAsync(dA, hA, nByteA, cudaMemcpyHostToDevice, cudaStreamPerThread);
 	cudaMemcpyAsync(dB, hB, nByteB, cudaMemcpyHostToDevice, cudaStreamPerThread);
 
+
+#ifndef CUBLAS_COMPARISION
 	//calculate by CPU
 	QueryPerformanceCounter(&IpStart);
 	matrixMulCPU(hA, hB, hC, matsize);
@@ -141,7 +149,6 @@ int main(int argc, char** argv)
 	printf("CPU time cost %.4f ms\n\n", cpu_time);
 	cudaDeviceSynchronize();
 	checkerror("Sync error");
-
 	//calculate by GPU, warmup first
 	Db_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	checkerror("mycublas error");
@@ -167,6 +174,56 @@ int main(int argc, char** argv)
 	double flops = (double)matsize.hA * (double)matsize.wA * (double)matsize.wB * 2.0;
 	double gigaFlops = (flops * 1.0e-9) / (gpu_time / 1000.0);
 	printf("FP32 %.4f TFlop/s, Ops %.4f Ops\n", gigaFlops / 1000.0, flops);
+#endif // !CUBLAS_COMPARISION
+
+
+#ifdef CUBLAS_COMPARISION
+	cudaDeviceSynchronize();
+	static const float alpha = 1.0f;
+	static const float beta = .0f;
+	printf("\nStarting CUBLAS comparision on device 0: \n");
+	cublasHandle_t cublasHandle;
+	cublasCreate_v2(&cublasHandle);
+	checkerror("CUBLAS create error");
+	cublasSgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+		matsize.wB, matsize.hA, matsize.wA,
+		&alpha, dB, matsize.wB,
+		dA, matsize.wA, &beta,
+		dC, matsize.wB);
+	cudaEventRecord(cuStart);
+	for (int i = 0; i < 50; i++)
+	{
+		Db_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+	}
+	cudaEventRecord(cuEnd);
+	cudaEventSynchronize(cuEnd);
+	cudaEventElapsedTime(&gpu_time, cuStart, cuEnd);
+	gpu_time /= 50;
+	printf("MyGEMM time cost %.4f ms\n", gpu_time);
+	double flops = (double)matsize.hA * (double)matsize.wA * (double)matsize.wB * 2.0;
+	double gigaFlops = (flops * 1.0e-9) / (gpu_time / 1000.0);
+	printf("FP32 %.4f TFlop/s, Ops %.4f Ops\n\n", gigaFlops / 1000.0, flops);
+
+	cudaEventRecord(cuStart);
+	for (int i = 0; i < 50; i++)
+	{
+		cublasSgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+			matsize.wB, matsize.hA, matsize.wA,
+			&alpha, dB, matsize.wB,
+			dA, matsize.wA, &beta,
+			dC, matsize.wB);
+	}
+	cudaEventRecord(cuEnd_CUBLAS);
+	cudaEventSynchronize(cuEnd_CUBLAS);
+	cudaEventElapsedTime(&gpu_time, cuStart, cuEnd_CUBLAS);
+	checkerror("Event sync error");
+	gpu_time /= 50;
+	printf("CUBLAS time cost %.4f ms\n", gpu_time);
+	flops = (double)matsize.hA * (double)matsize.wA * (double)matsize.wB * 2.0;
+	double gigaFlops_CUBLAS = (flops * 1.0e-9) / (gpu_time / 1000.0);
+	printf("FP32 %.4f TFlop/s, Ops %.4f Ops\n", gigaFlops_CUBLAS / 1000.0, flops);
+	printf("\n**********************\nResult: %.4f%% CUBLAS\n", gigaFlops/gigaFlops_CUBLAS*1e2);
+#endif // CUBLAS_COMPARISION
 
 
 	//free matrix
@@ -178,6 +235,7 @@ int main(int argc, char** argv)
 	cudaFreeAsync(dC, cudaStreamPerThread);
 	cudaEventDestroy(cuStart);
 	cudaEventDestroy(cuEnd);
+	cudaEventDestroy(cuEnd_CUBLAS);
 
 	return 0;
 }
