@@ -212,6 +212,12 @@ int main(int argc, char** argv)
 			&alpha, dB, matsize.wB,
 			dA, matsize.wA, &beta,
 			dC, matsize.wB);
+		//cublasSgemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+		//	matsize.wB, matsize.hA, matsize.wA,
+		//	&alpha, dB, (cudaDataType_t)0, matsize.wB,
+		//	dA, (cudaDataType_t)0, matsize.wA, &beta,
+		//	dC, (cudaDataType_t)0, matsize.wA
+		//);
 	}
 	cudaEventRecord(cuEnd_CUBLAS);
 	cudaEventSynchronize(cuEnd_CUBLAS);
