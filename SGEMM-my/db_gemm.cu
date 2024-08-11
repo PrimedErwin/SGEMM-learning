@@ -25,7 +25,7 @@ constexpr int N_num = N_tile / blockSize;//8
 //smem size for each block
 constexpr int smem_size_A = M_tile * K_tile;
 constexpr int smem_size_B = K_tile * N_tile;
-constexpr int smem_nByte = (smem_size_A + smem_size_B) * sizeof(float);
+//constexpr int smem_nByte = (smem_size_A + smem_size_B) * sizeof(float);
 //naive smem gemm func for startup.cpp
 //void naiveSmemGemm(const float* A, const float* B, float* C,
 //	const int M, const int N, const int K);
@@ -145,6 +145,18 @@ void Db_GEMM::matrixMul(const float* A, const float* B, float* C,
 				matA[_ldst_index][rowA + (colA + 3) * (M_tile + 4)] = regA[0].w;
 				//__syncthreads();
 			}
+			//if (k == K_tile - 1)
+			//{
+			//	_ldst_index ^= 1;
+			//	//last run for current K_tile, prefetch data for next Ktile
+			//	*reinterpret_cast<float4*>(&matB[_ldst_index][bIdx * 4]) = \
+			//		* reinterpret_cast<const float4*>(baseB + rowB * N + colB + (i + 1) * N * K_tile);
+			//	matA[_ldst_index][rowA + (colA + 0) * (M_tile + 4)] = *(baseA + rowA * K + colA + (i + 1) * K_tile);
+			//	matA[_ldst_index][rowA + (colA + 1) * (M_tile + 4)] = *(baseA + rowA * K + colA + (i + 1) * K_tile+1);
+			//	matA[_ldst_index][rowA + (colA + 2) * (M_tile + 4)] = *(baseA + rowA * K + colA + (i + 1) * K_tile+2);
+			//	matA[_ldst_index][rowA + (colA + 3) * (M_tile + 4)] = *(baseA + rowA * K + colA + (i + 1) * K_tile+3);
+			//	//__syncthreads();
+			//}
 		}
 		//sync block after each tiled block was calculated
 		__syncthreads();
