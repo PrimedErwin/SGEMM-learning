@@ -150,14 +150,14 @@ int main(int argc, char** argv)
 	cudaDeviceSynchronize();
 	checkerror("Sync error");
 	//calculate by GPU, warmup first
-	Db_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+	Db_exp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	checkerror("mycublas error");
 	//calculate by GPU
 	nvtxRangeId_t range = nvtxRangeStart("ProfileA");
 	cudaEventRecord(cuStart);
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < 1; i++)
 	{
-		Db_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+		Db_exp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 		//NC_WarpOp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	}
 	cudaEventRecord(cuEnd);
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 	cudaEventElapsedTime(&gpu_time, cuStart, cuEnd);
 	checkerror("Event sync error");
 	nvtxRangeEnd(range);
-	gpu_time /= 50;
+	gpu_time /= 1;
 	printf("GPU time cost %.4f ms\n\n", gpu_time);
 
 	//compare result
@@ -191,14 +191,14 @@ int main(int argc, char** argv)
 		dA, matsize.wA, &beta,
 		dC, matsize.wB);
 	cudaEventRecord(cuStart);
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 50; i++)
 	{
-		Db_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
+		Db_exp_GEMM::naiveSmemGemm(dA, dB, dC, matsize.hA, matsize.wB, matsize.wA);
 	}
 	cudaEventRecord(cuEnd);
 	cudaEventSynchronize(cuEnd);
 	cudaEventElapsedTime(&gpu_time, cuStart, cuEnd);
-	gpu_time /= 10;
+	gpu_time /= 50;
 	printf("MyGEMM time cost %.4f ms\n", gpu_time);
 	double flops = (double)matsize.hA * (double)matsize.wA * (double)matsize.wB * 2.0;
 	double gigaFlops = (flops * 1.0e-9) / (gpu_time / 1000.0);

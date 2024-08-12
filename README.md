@@ -97,6 +97,8 @@ ColC is divided into 4x8 perfectly, but rowC is 4x4 for unique mulitiplications.
 #### db_gemm
 &ensp;&ensp;FFMA can run with ld/st unit at the same time, so when the current K_tile is computing, load the next tile. Double buffer does this. In prefetching, ada can read data directly from gmem to smem without the assistance of register, but turing still needs additional registers. 
 
+#### db_gemm_exp
+&ensp;&ensp;Distributed pipeline ldgsts32, coalesced gmem request\(on working\)
 ### Profiling
 &ensp;&ensp;In this section I profile my kernel and compare with CUBLAS. 
 
@@ -119,7 +121,7 @@ Details of my kernel:
 - Launch Statistics:
  I planned to use 128 registers, but overflowed in warp_op_gemm\(and also warp_op_noconflict\). In double buffer version I used 137 registers. It will perform better below 128 registers due to higher occupancy. But I think it's hard to optimize it. Because due to compute/ldst ratio at gmem->smem stage, I tiled the matrix into 128x128 for 16x16 thread block, which each threads handle 8x8 matrix. So at least they will use 8x8+8+8 = 80 registers, later with index calculating things the program will touch the bottle neck of 128 registers. PTX may be helpful.
  - Occupancy:
- As we can see, 8 active warps per SM because I used too much registers. So only 1 block can be active, on cc8.9 device, which supports 1536 concurrent threads, the occupancy is 256/1536 = 0.1667. A way to optimize is tile the block into 128x256 for 16x32 thread block\(?\)
+ As we can see, 8 active warps per SM because I used too much registers. So only 1 block can be active, on cc8.9 device, which supports 1536 concurrent threads, the occupancy is 256/1536 = 0.1667. 
  
 Details of my kernel again:
 ![](img/profi4.png)
@@ -128,9 +130,7 @@ Details of my kernel again:
 ### Todo
 Register overflow\(not very possible\)
 
-Better double buffer and PTX
-
-Baseclock frequency drop
+PTX
 
 SplitK
 
