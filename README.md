@@ -31,6 +31,15 @@
       RTX2070: 2304 CUDA cores + 1620 MHz clock
 
       Single precision floating-point performance = 2304\*2\*1620\*1e6/1e9 = 7.46 TFLOPS
+## How to use
+ - Make sure you have cmake\(3.1 or above\)
+ - Cmd in current folder\(yes, right here\)
+ - `mkdir build`
+ - `cd build`
+ - `cmake-gui.exe ..`
+ - Configure->Visual Studio 2022, x64->Configure again->Generate
+ - Open project, choose SGEMM-learing as launching project, Release version
+ - Run and nsight
 ## Implementation
 ### Core: How to reach the hardware limitation
   Hiding the latency is important. Threads can't just wait for data, they should always be computing.
