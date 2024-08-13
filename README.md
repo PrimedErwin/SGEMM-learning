@@ -98,7 +98,7 @@ ColC is divided into 4x8 perfectly, but rowC is 4x4 for unique mulitiplications.
 &ensp;&ensp;FFMA can run with ld/st unit at the same time, so when the current K_tile is computing, load the next tile. Double buffer does this. In prefetching, ada can read data directly from gmem to smem without the assistance of register, but turing still needs additional registers. 
 
 #### db_gemm_exp
-&ensp;&ensp;Distributed pipeline ldgsts32, coalesced gmem request\(on working\)
+&ensp;&ensp;This file is searching for better double buffer. I tried to load gmem with float instead of float4, so that it can be distributed into 4 k-loops instead of 1. But it failed, seems it doesn't care whether gmem is loaded with float4 or float. And due to less occupancy\(only 8 active warps\), reading gmem's lantency can't be hidden: commenting gmem->smem code of double buffer, mycublas runs as fast as CUBLAS. 
 ### Profiling
 &ensp;&ensp;In this section I profile my kernel and compare with CUBLAS. 
 
