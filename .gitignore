@@ -1,5 +1,6 @@
 SGEMM-learning-local
 .obsidian
+build
 *.orig
 *.filters
 *.sln
